@@ -1,11 +1,16 @@
 package com.lambdaschool.shoppingcart.models;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import javax.persistence.*;
 import javax.validation.constraints.Email;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -163,14 +168,18 @@ public class User
         return password;
     }
 
+    public void setPasswordNoEncrypt(String password)
+    {
+        this.password = password;
+    }
+
     /**
-     * Setter for password
-     *
-     * @param password the new password (String) for the user
+     * @param password the new password (String) for this user. Comes in plain text and goes out encrypted
      */
     public void setPassword(String password)
     {
-        this.password = password;
+        BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+        this.password = passwordEncoder.encode(password);
     }
 
     /**
@@ -211,5 +220,27 @@ public class User
     public void setCarts(Set<CartItem> carts)
     {
         this.carts = carts;
+    }
+
+    /**
+     * Internally, user security requires a list of authorities, roles, that the user has. This method is a simple way to provide those.
+     * Note that SimpleGrantedAuthority requests the format ROLE_role name all in capital letters!
+     *
+     * @return The list of authorities, roles, this user object has
+     */
+    @JsonIgnore
+    public List<SimpleGrantedAuthority> getAuthority()
+    {
+        List<SimpleGrantedAuthority> rtnList = new ArrayList<>();
+
+        for (UserRoles r : this.roles)
+        {
+            String myRole = "ROLE_" + r.getRole()
+                .getName()
+                .toUpperCase();
+            rtnList.add(new SimpleGrantedAuthority(myRole));
+        }
+
+        return rtnList;
     }
 }
